@@ -96,10 +96,12 @@ public class MainActivity extends Activity {
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_main);
+        //第一步：获取媒体服务，为录屏做准备
         mMediaProjectionManager = (MediaProjectionManager) getApplicationContext().getSystemService(MEDIA_PROJECTION_SERVICE);
         mNotifications = new Notifications(getApplicationContext());
         bindViews();
 
+        //第二步：获取当前手机支持的视频编码类型，并作为编码选项进行显示
         Utils.findEncodersByTypeAsync(VIDEO_AVC, infos -> {
             logCodecInfos(infos, VIDEO_AVC);
             mAvcCodecInfos = infos;
@@ -108,6 +110,7 @@ public class MainActivity extends Activity {
             restoreSelections(mVideoCodec, mVieoResolution, mVideoFramerate, mIFrameInterval, mVideoBitrate);
 
         });
+        //第三步：获取当前手机支持的音频编码类型，并作为编码选项进行显示
         Utils.findEncodersByTypeAsync(AUDIO_AAC, infos -> {
             logCodecInfos(infos, AUDIO_AAC);
             mAacCodecInfos = infos;
@@ -115,9 +118,11 @@ public class MainActivity extends Activity {
             mAudioCodec.setAdapter(codecsAdapter);
             restoreSelections(mAudioCodec, mAudioChannelCount);
         });
+        //getResourceEntryName这个方法获取的是控件在xml中的命名
+        String resourceEntryName = getResources().getResourceEntryName(mAudioToggle.getId());
         mAudioToggle.setChecked(
                 PreferenceManager.getDefaultSharedPreferences(getApplicationContext())
-                        .getBoolean(getResources().getResourceEntryName(mAudioToggle.getId()), true));
+                        .getBoolean(resourceEntryName, true));
     }
 
     @Override
@@ -140,12 +145,14 @@ public class MainActivity extends Activity {
             // NOTE: Should pass this result data into a Service to run ScreenRecorder.
             // The following codes are merely exemplary.
 
+            //第五步：获取到媒体服务实例
             MediaProjection mediaProjection = mMediaProjectionManager.getMediaProjection(resultCode, data);
             if (mediaProjection == null) {
                 Log.e("@@", "media projection is null");
                 return;
             }
 
+            //第六步：获取音视频配置
             VideoEncodeConfig video = createVideoConfig();
             AudioEncodeConfig audio = createAudioConfig(); // audio can be null
             if (video == null) {
@@ -272,6 +279,7 @@ public class MainActivity extends Activity {
     }
 
     private void startCaptureIntent() {
+        //第四步：发送录屏intent，请求开始录屏
         Intent captureIntent = mMediaProjectionManager.createScreenCaptureIntent();
         startActivityForResult(captureIntent, REQUEST_MEDIA_PROJECTION);
     }
@@ -330,6 +338,7 @@ public class MainActivity extends Activity {
         } else if (hasPermissions()) {
             startCaptureIntent();
         } else if (Build.VERSION.SDK_INT >= M) {
+            //需要请求权限
             requestPermissions();
         } else {
             toast("No permission to write sd card");
@@ -341,6 +350,7 @@ public class MainActivity extends Activity {
         mRecorder.start();
         mButton.setText("Stop Recorder");
         registerReceiver(mStopActionReceiver, new IntentFilter(ACTION_STOP));
+        //将activity移动到后台
         moveTaskToBack(true);
     }
 
